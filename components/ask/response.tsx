@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect, useContext } from 'react';
 import Followup from '@/components/ask/followup';
-import { GeneratingContext, ResponseContext, LeftRightContext } from '@/app/lib/context';
+import { GeneratingContext, ResponseContext, LeftRightContext, ResponseDispatchContext } from '@/app/lib/context';
 import QueryBox from '@/components/ask/querybox';
 import clsx from 'clsx';
+import React from 'react';
 
 type ResponseTypes = {
-    responseId: number,
     lr: string,
-    output: string | undefined
+    output: string | undefined,
+    spans: Array<StoredSpansType>,
+    addSpan: (responseId, newSpan) => {}
 }
 
 type StoredSpansType = {
@@ -17,13 +19,14 @@ type StoredSpansType = {
     query: string
 }
 
-export default function Response({ responseId, lr, output }: ResponseTypes) {
+export default React.memo(Response);
+
+function Response({ lr, output, spans, addSpan }: ResponseTypes) {
     const [focusedSpan, setFocusedSpan] = useState<HTMLSpanElement | null>(null);
-    const [storedSpans, setStoredSpans] = useState<StoredSpansType[]>([])
+    const [storedSpans, setStoredSpans] = useState<Array<StoredSpansType>>(spans);
     const [selection, setSelection] = useState<number[] | null>(null);
     const [selectionText, setSelectionText] = useState<string>('');
     const outputRef = useRef<any>(null);
-    const spanRef = useRef<any>(null);
 
     const generating = useContext(GeneratingContext);
     const responses = useContext(ResponseContext);
@@ -40,7 +43,7 @@ export default function Response({ responseId, lr, output }: ResponseTypes) {
     }
 
     const handleFollowup = (thisId: number) => {
-        setStoredSpans([...storedSpans, {span: focusedSpan, parentId: lrIds[thisLr], id: thisId, query: query}]);
+        addSpan(lrIds[thisLr], focusedSpan);
         setFocusedSpan(null);
         setSelection(null);
     }
@@ -61,7 +64,7 @@ export default function Response({ responseId, lr, output }: ResponseTypes) {
                     range.surroundContents(span);
                     const responseDiv = span.parentElement;
                     let pos = null;
-                    if (responseDiv) pos = [rect.left - responseDiv.offsetLeft, rect.bottom - responseDiv.offsetTop + responseDiv.scrollTop];
+                    if (responseDiv) pos = [Math.min((rect.left - responseDiv.offsetLeft), 340), rect.bottom - responseDiv.offsetTop + responseDiv.scrollTop];
                     setFocusedSpan(span);
                     setSelection(pos);
                     setSelectionText(span.innerText);
@@ -99,8 +102,6 @@ export default function Response({ responseId, lr, output }: ResponseTypes) {
             outputElement.addEventListener('mousedown', handleSelectionOff);
         }
 
-
-
         return () => {
             if (outputElement) {
                 outputElement.removeEventListener('mouseup', handleSelectionOn);
@@ -110,12 +111,14 @@ export default function Response({ responseId, lr, output }: ResponseTypes) {
     }, [selection, focusedSpan]);
 
     return (
-        <div className="h-full w-1/2 flex flex-col bg-white text-stone-600">
+        <>
+        {lr !== 'none' && <div className="h-full w-1/2 flex flex-col bg-white text-stone-600">
             {query && <QueryBox query={query} lr={lr}/>}
-            <div ref={outputRef} className={clsx("relative text-md w-full border-l-2 px-4 pb-4 overflow-scroll selection:bg-emerald-200 selection:opacity-100", {"h-full": query === '', "h-5/6": query !== ''})}>
+            <div ref={outputRef} className={clsx("relative text-md w-full border-l-2 p-4 overflow-scroll selection:bg-emerald-200 selection:opacity-100", {"h-full": query === '', "h-5/6": query !== ''})}>
                 {output}
                 {!generating && selection && <Followup selectionText={selectionText} handleFollowup={handleFollowup} lr={lr} position={selection}/>}
             </div>
-        </div>
+        </div>}
+        </>
     );
 }

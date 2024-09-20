@@ -26,13 +26,14 @@ export default function Form() {
             const query = input.value;
 
             if (query) {
-                thisId = 0;
                 dispatchResponses({type: 'clear'});
+                thisId = 0;
+                
                 setQuery('');
                 setGenerating(true);
                 const { messages, newMessage } = await generateConversation([{role: 'user', content: query}]);
 
-                dispatchResponses({type: 'add', query: query, id: thisId, response: ''});
+                dispatchResponses({type: 'addQuery', query: query, id: thisId});
                 let textContent = '';
 
                 for await (const delta of readStreamableValue(newMessage)) {
@@ -41,12 +42,16 @@ export default function Form() {
                     dispatchResponses(action);
                 }
 
-                setHistory([
+                console.log([
                     ...messages,
-                    { role: 'assistant', content: textContent },
-                ]);
+                    { role: 'assistant', content: textContent }
+                ])
+                dispatchResponses({type: 'addHistory', history: [
+                    ...messages,
+                    { role: 'assistant', content: textContent }
+                ], id: thisId});
 
-                setThisId(thisId => thisId + 1);
+                setThisId(thisId + 1);
                 setGenerating(false);
             }
         }

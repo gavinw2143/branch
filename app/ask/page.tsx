@@ -13,16 +13,18 @@ interface ResponseType {
 }
 
 export default function App() {
-  const [leftRight, setLeftRight] = useState([0, 1]);
+  const renderResponse = (lr, response, spans, addSpan, idx) => {
+    return <Response lr={lr} output={response} spans={spans} addSpan={addSpan} key={idx}>
 
-  const lr_value = {leftRight, setLeftRight};
+    </Response>
+  }
 
   return (
     <div className="flex h-dvh w-dvh">
       <Navbar></Navbar>
       <div className="flex flex-col w-5/6 h-full">
         <ResponseContextProvider>
-          <ResponseContainer>
+          <ResponseContainer renderResponse={renderResponse}>
           </ResponseContainer>
           <Form></Form>
         </ResponseContextProvider>
